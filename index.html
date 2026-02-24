@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Simulacro 2 Examen Celador</title>
+<style>
+    /* ESTILOS BASE */
+    :root { --main: #800040; --ok: #198754; --fail: #dc3545; --blank: #6c757d; --bg: #f4f7f6; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { font-family: system-ui, sans-serif; background: var(--bg); margin: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* MENSAJE DE ERROR ANTIFALLOS MAC */
+    #crash-msg { display:none; padding:20px; background:#f8d7da; color:#721c24; text-align:center; font-weight:bold; font-size: 1.1rem; border-bottom: 3px solid #f5c6cb; z-index: 99999; }
+
+    /* HEADER */
+    header { background: #fff; padding: 8px 12px; border-bottom: 4px solid var(--main); z-index: 100; flex-shrink: 0; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .top-bar { display: flex; justify-content: space-between; align-items: center; gap: 5px; }
+    .title { font-weight: 900; color: var(--main); font-size: 0.9rem; margin: 0; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    
+    .controls { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+    .btn-icon { background: #e2e6ea; border: 1px solid #ccc; border-radius: 6px; padding: 6px 10px; font-size: 1.1rem; cursor: pointer; line-height: 1; min-width: 40px; }
+    .timer { background: #fce4ec; color: var(--main); padding: 5px 10px; border-radius: 12px; font-weight: bold; font-size: 1rem; min-width: 70px; text-align: center; border: 1px solid #f8bbd0; font-variant-numeric: tabular-nums; }
+    .btn-pause { background: #6c757d; color: white; border: none; width: 32px; height: 32px; border-radius: 50%; font-size: 12px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+    .score-bar { display: flex; justify-content: center; align-items: center; gap: 15px; background: #f8f9fa; margin-top: 8px; padding: 5px; border-radius: 6px; font-size: 0.95rem; font-weight: bold; border: 1px solid #eee; }
+    .progress-track { height: 6px; background: #e0e0e0; margin-top: 8px; border-radius: 3px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--main); width: 0%; transition: width 0.3s; }
+
+    /* CONTENIDO */
+    main { flex: 1; overflow-y: auto; padding: 15px; -webkit-overflow-scrolling: touch; display: flex; justify-content: center; align-items: flex-start; }
+    .card { background: #fff; width: 100%; max-width: 800px; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 40px; }
+
+    /* PREGUNTA */
+    .q-meta { color: #888; font-size: 0.85rem; font-weight: 800; text-transform: uppercase; margin-bottom: 15px; display: block; }
+    .q-text { font-size: 1.2rem; font-weight: 700; color: #222; margin-bottom: 20px; line-height: 1.4; }
+    
+    .split-layout { display: flex; flex-direction: column; gap: 15px; }
+    @media(min-width: 768px) { .split-layout { flex-direction: row; align-items: flex-start; } .img-col { width: 45%; } .txt-col { width: 55%; } }
+    .q-img { width: 100%; height: auto; border: 1px solid #ccc; border-radius: 8px; display: block; margin-bottom: 15px; }
+
+    /* OPCIONES */
+    .options-grid { display: flex; flex-direction: column; gap: 12px; }
+    .btn-opt { width: 100%; text-align: left; background: #fff; border: 2px solid #e0e0e0; padding: 16px; border-radius: 10px; font-size: 1rem; color: #333; cursor: pointer; -webkit-appearance: none; touch-action: manipulation; transition: 0.1s; }
+    .btn-opt:active { background: #f8f9fa; transform: scale(0.99); }
+    .btn-opt.correct { background: #d1e7dd !important; border-color: var(--ok) !important; color: #0f5132 !important; font-weight: bold; }
+    .btn-opt.wrong { background: #f8d7da !important; border-color: var(--fail) !important; color: #842029 !important; }
+    .disabled { pointer-events: none; opacity: 1; }
+
+    /* NAVEGACIÓN */
+    .nav-bar { display: flex; gap: 10px; margin-top: 30px; padding-top: 15px; border-top: 1px solid #eee; }
+    .btn-nav { flex: 1; padding: 15px; border: none; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; background: #e9ecef; color: #555; -webkit-appearance: none; }
+    .btn-next { background: var(--main); color: #fff; }
+    .btn-finish { background: #212529 !important; color: #fff !important; display: none; }
+    .btn-nav:disabled { opacity: 0.4; }
+
+    /* PAUSA */
+    #pause-screen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.98); z-index: 2000; align-items: center; justify-content: center; flex-direction: column; }
+    .btn-resume { padding: 15px 40px; background: var(--main); color: #fff; border: none; border-radius: 30px; font-size: 1.2rem; font-weight: bold; cursor: pointer; }
+
+    /* RESULTADOS */
+    #results-view { display: none; text-align: center; }
+    .res-tbl { width: 100%; border-collapse: collapse; margin: 20px 0; border: 2px solid var(--main); }
+    .res-tbl th { background: var(--main); color: #fff; padding: 10px; }
+    .res-tbl td { border: 1px solid #ddd; padding: 10px; font-size: 1.1rem; }
+    .bolsa-box { background: #fff3cd; border: 2px solid #ffc107; padding: 15px; border-radius: 10px; margin: 20px 0; }
+    .actions { display: flex; gap: 10px; margin-bottom: 30px; flex-direction: column; }
+    @media(min-width: 400px) { .actions { flex-direction: row; } }
+    .btn-act { flex: 1; padding: 12px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: #fff; }
+    .btn-rep { background: var(--main); }
+    .btn-goog { background: #4285F4; }
+    .rev-list { text-align: left; margin-top: 30px; }
+    .rev-item { padding: 15px 0; border-bottom: 1px solid #eee; }
+</style>
+
+<script>
+    window.onerror = function(msg, url, lineNo, columnNo, error) {
+        var errBox = document.getElementById('crash-msg');
+        if(errBox) {
+            errBox.style.display = 'block';
+            errBox.innerHTML = "⚠️ ERROR CRÍTICO DETECTADO<br><br>Parece que las comillas del código se han corrompido al guardarlo en TextEdit (Mac).<br><br>Por favor, asegúrate de desactivar 'Comillas tipográficas' en Edición -> Sustituciones dentro de TextEdit y vuelve a pegar el código.<br><br><small>Detalle técnico: " + msg + " en línea " + lineNo + "</small>";
+        }
+        return false;
+    };
+</script>
+</head>
+<body>
+
+<div id="crash-msg"></div>
+
+<div id="pause-screen">
+    <h2 style="color:var(--main)">TEST PAUSADO</h2>
+    <button class="btn-resume" onclick="togglePause()">CONTINUAR</button>
+</div>
+
+<header>
+    <div class="top-bar">
+        <div class="title">SIMULACRO 2 EXAMEN CELADOR</div>
+        <div class="controls">
+            <button class="btn-icon" onclick="manualJump(0)">⏪</button>
+            <button class="btn-icon" onclick="manualJump(db.length - 1)">⏩</button>
+            <div class="timer" id="timer">128:45</div>
+            <button class="btn-pause" onclick="togglePause()">II</button>
+        </div>
+    </div>
+    <div class="score-bar">
+        <span style="color:var(--ok)">✅ <span id="sc-ok">0</span></span>
+        <span style="color:var(--fail)">❌ <span id="sc-fail">0</span></span>
+        <span style="color:var(--blank)">⚪ <span id="sc-blank">103</span></span>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="prog-bar"></div></div>
+</header>
+
+<main>
+    <div id="quiz-view" class="card">
+        <div id="question-container"></div>
+        <div class="nav-bar">
+            <button class="btn-nav" id="btn-prev" onclick="manualNav(-1)">ANTERIOR</button>
+            <button class="btn-nav btn-next" id="btn-next" onclick="manualNav(1)">SIGUIENTE</button>
+            <button class="btn-nav btn-finish" id="btn-end" onclick="finishTest()">FINALIZAR</button>
+        </div>
+    </div>
+
+    <div id="results-view" class="card">
+        <h2 style="color:var(--main)">RESULTADOS FINALES</h2>
+        <table class="res-tbl">
+            <tr><th>Aciertos</th><th>Fallos</th><th>Blancos</th></tr>
+            <tr style="font-weight:bold; font-size:1.4rem">
+                <td style="color:var(--ok)" id="r-ok">0</td>
+                <td style="color:var(--fail)" id="r-fail">0</td>
+                <td id="r-blank">0</td>
+            </tr>
+            <tr style="background:#f9f9f9; font-size:0.9rem; color:#666;">
+                <td>x 3.75</td><td>x 1.25</td><td>PUNTOS / 386.25</td>
+            </tr>
+            <tr style="font-size:1.6rem; color:var(--main); font-weight:bold">
+                <td id="pts-ok">0</td>
+                <td id="pts-fail">0</td>
+                <td id="pts-total">0</td>
+            </tr>
+        </table>
+
+        <div class="bolsa-box">
+            <div style="font-size:1.2rem">NOTA (0-10): <strong id="val-10">0</strong></div>
+            <div style="font-size:1.8rem; font-weight:900; color:#d35400; margin-top:5px">BOLSA: <span id="val-bolsa">0 PUNTOS</span></div>
+        </div>
+
+        <div id="quote-area" style="font-style:italic; color:#555; background:#f9f9f9; padding:15px; border-radius:8px; margin:20px 0;"></div>
+        
+        <div class="actions">
+            <button class="btn-act btn-rep" onclick="location.reload()">REPETIR TEST</button>
+            <button class="btn-act btn-goog" onclick="window.location.href='https://www.google.com'">SALIR A GOOGLE</button>
+        </div>
+
+        <h3 style="text-align:left; border-bottom:2px solid #eee">Revisión de Respuestas</h3>
+        <div id="review-list" class="rev-list"></div>
+    </div>
+</main>
+
+<script>
+// DATOS (Comillas limpias y controladas)
+const db = [
+ {q:"1. Conforme al artículo 116 de la Constitución, ¿quién declara, y por cuánto tiempo, el estado de alarma?",o:["a) Por el Gobierno mediante Decreto acordado en Consejo de Ministros por un período máximo de treinta días.","b) Por el Gobierno mediante Decreto acordado en Consejo de Ministros por un período improrrogable de quince días.","c) Por el Gobierno mediante Decreto acordado en Consejo de Ministros por un período de quince días prorrogable.","d) Por la mayoría absoluta del Congreso de los Diputados, a propuesta exclusiva del Gobierno."],a:2},
+ {q:"2. El Defensor del Pueblo es elegido por las Cortes Generales por un periodo de cinco años, pero ¿quién propone su elección?",o:["a) Los Plenos de ambas Cámaras por mayoría absoluta.","b) El Presidente del Gobierno.","c) La Comisión mixta Congreso-Senado para las elecciones del Defensor del Pueblo.","d) La Comisión mixta Congreso-Senado para las relaciones con el Defensor del Pueblo."],a:3},
+ {q:"3. Señala una de las atribuciones del Consell en política general:",o:["a) Aprobar las directrices de coordinación que habrán de aplicar las Diputaciones Provinciales en las materias declaradas de interés general para la Comunitat Valenciana.","b) Ejercer la potestad reglamentaria, de acuerdo con la Constitución Española, el Estatut d'Autonomia de la Comunitat Valenciana y las leyes.","c) Proponer a Les Corts la reforma del Estatut d'Autonomia de la Comunitat Valenciana.","d) La planificación y desarrollo de la política valenciana."],a:3},
+ {q:"4. Señala cuál de las siguientes no es una de las 11 Consellerias determinadas en el Decreto 5/2019 de 16 de junio del President de la Generalitat:",o:["a) Conselleria de Agricultura, Desarrollo Rural, Emergencia Climática y Transición Ecológica.","b) Conselleria de Hacienda y Financiación Europea.","c) Conselleria de Economía Sostenible, Sectores Productivos, Comercio y Trabajo.","d) Conselleria de Justicia, Interior y Administración Pública."],a:1},
+ {q:"5. Señala la respuesta incorrecta respecto al I Plan de Igualdad de la Conselleria de Sanidad Universal y Salud Pública:",o:["a) Plantea 9 Áreas de intervención, asignando a cada una de ellas un objetivo a alcanzar y un conjunto de medidas que adoptar para su consecución.","b) Va dirigido a todo el personal gestionado por la Conselleria de Sanidad Universal y Salud Pública, cualquiera que sea su relación jurídica, plaza o puesto que ocupe, así como al personal adscrito a los consorcios hospitalarios.","c) La Resolución de 9 de junio de 2016, de la Consellera de Sanidad Universal y Salud Pública, ordenó la publicación del I Plan de Igualdad de la Conselleria de Sanidad Universal y Salud Pública.","d) Quedan fuera de su ámbito las trabajadoras y los trabajadores que presten sus servicios en centros gestionados mediante concesión administrativa en régimen distinto del estatutario."],a:1},
+ {q:"6. ¿Qué Área del I Plan de Igualdad de la Conselleria de Sanidad Universal y Salud Pública tiene por objetivo promover la paridad en la composición de los órganos colegiados de carácter técnico, existentes en la Conselleria?",o:["a) El Área I.","b) El Área II.","c) El Área III.","d) El Área V."],a:1},
+ {q:"7. ¿Cómo se denomina el tratamiento de datos personales de manera tal que ya no puedan atribuirse a un interesado sin utilizar información adicional, siempre que dicha información adicional figure por separado y esté sujeta a medidas técnicas y organizativas destinadas a garantizar que los datos personales no se atribuyan a una persona física identificada o identificable?",o:["a) Anonimato digital.","b) Aislación.","c) Generalización.","d) Seudonimización."],a:3},
+ {q:"8. ¿Qué principio relativo al tratamiento dispone que los datos personales serán adecuados, pertinentes y limitados a lo necesario en relación con los fines para los que son tratados?",o:["a) El principio de responsabilidad.","b) El principio de minimización de datos.","c) El principio de exactitud.","d) El principio de licitud, lealtad y transparencia."],a:1},
+ {q:"9. ¿Cuál es la velocidad de un USB 3.0?",o:["a) 12 Megabits por segundo.","b) 480 Megabits por segundo.","c) 4,8 Gigabits por segundo.","d) 10 Gigabits por segundo."],a:2},
+ {q:"10. Señala cuál de los siguientes no es un periférico de entrada:",o:["a) Micrófono.","b) Escáner.","c) Webcam.","d) Plóter."],a:3},
+ {q:"11. ¿Qué tipo de referencias toma Excel por defecto?",o:["a) Las Referencias Relativas.","b) Las Referencias Mixtas.","c) Las Referencias Absolutas.","d) Las Referencias Simples."],a:0},
+ {q:"12. Para escribir la fórmula en la celda, siempre deberá comenzar con un:",o:["a) +.","b) =.","c) -.","d) /."],a:1},
+ {q:"13. Las Comunidades Autónomas ajustarán el ejercicio de sus competencias en materia sanitaria a:",o:["a) Criterios de participación democrática de todos los interesados, así como de los representantes sindicales y de las organizaciones empresariales.","b) Criterios de participación democrática de todos los usuarios, así como de los representantes de los consumidores y de los usuarios.","c) Los representantes sindicales y de las organizaciones empresariales de sus respectivos Servicios de Salud.","d) Los órganos de gestión y control de sus respectivos Servicios de Salud."],a:0},
+ {q:"14. Con el fin de articular la participación en el ámbito de las Comunidades Autónomas, se creará:",o:["a) El Área de Salud de la Comunidad Autónoma.","b) El Consejo de Salud de la Comunidad Autónoma.","c) El órgano de gestión de sus respectivos Servicios de Salud.","d) El órgano de control de sus respectivos Servicios de Salud."],a:1},
+ {q:"15. En relación con los siguientes principios básicos, señala la respuesta correcta:",o:["a) El paciente o usuario tiene derecho a decidir libremente, antes de recibir la información adecuada, entre las opciones clínicas disponibles.","b) Todo paciente o usuario tiene deber a negarse al tratamiento, excepto en los casos determinados en la Ley.","c) La negativa al tratamiento constará por escrito.","d) Los pacientes o usuarios tienen el derecho de facilitar los datos sobre su estado físico o sobre su salud de manera leal y verdadera."],a:2},
+ {q:"16. ¿Quién prestará el consentimiento cuando el paciente no sea capaz de tomar decisiones, a criterio del médico responsable de la asistencia, o su estado físico o psíquico no le permita hacerse cargo de su situación?",o:["a) El representante legal si existe.","b) Las personas vinculadas a él por razones familiares.","c) Las personas vinculadas a él por razones de hecho.","d) Todas las respuestas son correctas."],a:0},
+ {q:"17. Los centros sanitarios tienen la obligación de conservar la documentación clínica en condiciones que garanticen su correcto mantenimiento y seguridad, aunque no necesariamente en el soporte original, para la debida asistencia al paciente durante el tiempo adecuado a cada caso y, como mínimo:",o:["a) Cinco años contados desde la fecha del alta de cada proceso asistencial.","b) Cuatro años contados desde la fecha del alta de cada proceso asistencial.","c) Tres años contados desde la fecha del alta de cada proceso asistencial.","d) Dos años contados desde la fecha del alta de cada proceso asistencial."],a:0},
+ {q:"18. La gestión de la historia clínica por los centros con pacientes hospitalizados, o por los que atiendan a un número suficiente de pacientes bajo cualquier otra modalidad asistencial, según el criterio de los servicios de salud, se realizará a través de:",o:["a) La unidad de admisión y documentación clínica, encargada de integrar en un solo archivo las historias clínicas.","b) La dirección del centro sanitario.","c) Los profesionales sanitarios.","d) Todas las respuestas son correctas."],a:0},
+ {q:"19. Funcionalmente, el personal de los Servicios de Atención e Información al Paciente dependerá de:",o:["a) La Gerencia de su Departamento de Salud.","b) El Comisionado de Sanidad del Departamento de Salud.","c) La Dirección General con competencias en materia de atención al/a la paciente.","d) Unidad funcional de atención e información."],a:2},
+ {q:"20. Para alcanzar los objetivos de eficacia y eficiencia, el Servicio de Atención e Información al Paciente desarrolla sus funciones en cada Departamento de Salud a través de la siguiente estructura:",o:["a) La Gerencia de su Departamento de Salud.","b) El Comisionado de Sanidad del Departamento de Salud.","c) La Dirección General con competencias en materia de atención al/a la paciente.","d) Unidad funcional de atención e información."],a:3},
+ {q:"21. ¿Corresponde a los celadores informar sobre el pronóstico de un paciente a sus familiares?",o:["a) Si el celador es conocedor, gracias a su experiencia, de la gravedad y posible pronóstico de la enfermedad, debe informar a los familiares.","b) Solo si tienen información sobre diagnósticos, exploraciones o tratamientos.","c) Debe valorarlo en cada situación concreta.","d) Nunca."],a:3},
+ {q:"22. El jefe de personal subalterno tiene unas funciones definidas, pero también pueden confiarle otras misiones algunos de los siguientes profesionales:",o:["a) El Director Gerente y el Director de Gestión y Servicios Generales de la Institución.","b) El jefe de seguridad, el director del centro y el gerente de zona.","c) El jefe de sala y el presidente de sección.","d) Nadie puede asignarle más misiones que las ya establecidas."],a:0},
+ {q:"23. ¿Es deber del jefe de personal subalterno cuidará de la compostura y aseo del personal a sus órdenes?",o:["a) Si, además, revisará y exigirá que vistan el uniforme reglamentario.","b) No.","c) Esta es una función del personal de limpieza.","d) Si, del personal a sus órdenes y de los pacientes."],a:0},
+ {q:"24. Una de las misiones del jefe de personal subalterno es:",o:["a) Ejercer el debido y discreto control de paquetes y bultos de que sean portadoras las personas ajenas a la institución que tengan acceso a la misma.","b) Abrir todos los paquetes que entreguen en la institución, siendo su responsabilidad y pudiendo delegar esta en el personal a su cargo.","c) No abrir ni mostrar interés por los paquetes y bultos de que sean portadoras las personas ajenas a la Institución que tengan acceso a la misma.","d) Velar por la integridad de los paquetes que entren en la institución."],a:0},
+ {q:"25. La supervisión del cumplimiento del horario del personal de oficio corresponde a:",o:["a) Cada trabajador es responsable de su horario y solo debe responder ante el director del centro.","b) Opcionalmente el jefe de personal subalterno puede estar atento a los horarios de los demás y en caso de detectar mala fe, tendrá que expulsar al trabajador de su puesto.","c) Al jefe del personal subalterno y tendrá que comprobar que permanecen constantemente en su puesto de trabajo.","d) Es función del director de la institución."],a:2},
+ {q:"26. El baño de los enfermos masculinos cuando no puedan hacerlo por sí mismos, es una tarea que debe ser realizada por:",o:["a) Los celadores, siempre de acuerdo con las instrucciones que reciban de las Supervisoras de plantas o servicios o personas que las sustituyan.","b) Esta labor debe realizarla las enfermeras, con independencia del género de los pacientes.","c) Esta labor es de las auxiliares.","d) Los pacientes deben asearse solos, en caso de no ser posible, lo hará un familiar."],a:0},
+ {q:"27. ¿Cómo se denomina al tipo de asistencia sanitaria prestada por la Unidad de Urgencias del hospital, que comprende, asistencia en urgencias y alta al domicilio?",o:["a) Asistencia en régimen de observación.","b) Asistencia en régimen domiciliario.","c) Asistencia en régimen ambulatorio.","d) Asistencia en régimen de inmediatez."],a:2},
+ {q:"28. Señala cuál de los siguientes enunciados, no corresponde con alguno de los responsables del servicio de urgencias hospitalario:",o:["a) Jefe de personal subalterno.","b) Supervisor/a de enfermería.","c) Coordinador médico de urgencias.","d) Responsable de hostelería y limpieza."],a:3},
+ {q:"29. ¿Cómo se denomina a los médicos que están recibiendo formación como de especialistas en el hospital durante varios años? Entre los distintos servicios en que se han de formar se encuentra urgencias.",o:["a) Facultativos especialistas.","b) MIR (médicos internos residentes).","c) Médicos generalistas.","d) Facultativos no especialistas."],a:1},
+ {q:"30. ¿En qué instalaciones se ubican los Servicios especiales de urgencias?",o:["a) En las áreas de urgencias hospitalarias.","b) En los Centros de Salud.","c) En las áreas de urgencias de los hospitales de nivel 1.","d) En instalaciones del municipio donde se ubiquen."],a:1},
+ {q:"31. ¿Cuál de los siguientes tipos de asistencia, no es propia de los Servicios Normales de Urgencias y Servicios Especiales de Urgencias?",o:["a) Asistencia en régimen ambulatorio.","b) Asistencia urgente.","c) Asistencia en régimen de internamiento.","d) Asistencia domiciliaria."],a:2},
+ {q:"32. ¿Qué horario de apertura al público tienen los Centros de Salud?",o:["a) De 8 a 15 horas.","b) De 9 a 17 horas.","c) De 8 a 20 horas.","d) 24 horas."],a:1},
+ {q:"33. ¿Cuál de las siguientes funciones, es propia de los celadores en las unidades de urgencias extra hospitalarias?",o:["a) Facilitará la hoja de reclamaciones a usuarios que no estén de acuerdo con la atención recibida.","b) Transportar al enfermo en camilla/silla, así como el equipamiento sanitario que fuese necesario.","c) Tomar los datos del paciente, así como reflejar el motivo de la consulta.","d) Todas las anteriores."],a:3},
+ {q:"34. ¿Cómo se denomina también a la posición de decúbito dorsal?",o:["a) Decúbito prono.","b) Decúbito lateral izquierdo.","c) Decúbito supino.","d) Decúbito transversal."],a:2},
+ {q:"35. Los cambios frecuentes de postura en los pacientes encamados tienen como finalidad:",o:["a) Evitar la aparición de isquemia en los llamados puntos de presión, debido a la acción de la gravedad y al propio peso corporal, así como para impedir que la ropa que cubre la cama roce la piel y llegue a producir lesiones.","b) Prevenir la aparición de úlceras por presión (anteriormente denominadas úlceras por decúbito).","c) Proporcionar comodidad al paciente.","d) Todas las anteriores son ciertas."],a:3},
+ {q:"36. ¿Qué material de estos no es necesario para realizar los cambios posturales del paciente?",o:["a) Almohadas, cojines y ropa limpia.","b) Férulas y a veces protectores de protuberancia.","c) Jabón y antisépticos.","d) Son todos necesarios."],a:2},
+ {q:"37. Los cambios posturales del enfermo encamado para prevenir la aparición de úlceras se efectuarán cada:",o:["a) 2-3 horas.","b) 4-5 horas.","c) 6-8 horas.","d) 12 horas."],a:0},
+ {q:"38. ¿Qué es falso de la posición de decúbito supino?",o:["a) Es una posición utilizada para la exploración del tórax, abdomen, piernas y pies.","b) Se emplea para comenzar con la higiene del enfermo y como punto de partida para diferentes movilizaciones.","c) El plano del cuerpo es paralelo al plano del suelo y al plano horizontal de la cama o camilla.","d) Sus piernas están extendidas y sus brazos alineados a lo largo del cuerpo, estando el paciente acostado sobre su abdomen y pecho."],a:3},
+ {q:"39. ¿Qué posición es de mucha utilidad en las embarazadas para evitar el \"síndrome de hipotensión en decúbito supino\" que se produce como consecuencia de la compresión del útero sobre la vena cava inferior?",o:["a) Decúbito dorsal.","b) Decúbito lateral izquierdo o derecho.","c) Decúbito prono.","d) Decúbito ventral."],a:1},
+ {q:"40. ¿Cuál de estas posiciones es fundamental para los enfermos encamados, como medio de utilidad en los cambios posturales evitando o previniendo la aparición de úlceras por presión?",o:["a) Decúbito prono.","b) Decúbito lateral izquierdo o derecho.","c) Decúbito supino.","d) Son útiles todas las anteriores."],a:3},
+ {q:"41. la capacidad para multiplicarse el agente causal en los tejidos dando o no lugar a la enfermedad se denomina:",o:["a) Infectividad.","b) Contagiosidad.","c) Virulencia.","d) ADN."],a:0},
+ {q:"42. La habilidad de un agente causal para producir reacción inmunológica local o general se denomina:",o:["a) Virulencia.","b) Infectividad.","c) Contagiosidad.","d) Inmunogenicidad."],a:3},
+ {q:"43. La capacidad para dar lugar a una enfermedad una vez infectado el huésped se denomina:",o:["a) Virulencia.","b) Patogenicidad.","c) Contagiosidad.","d) Antigenicidad."],a:1},
+ {q:"44. No es un eslabón de la cadena epidemiológica:",o:["a) Reservorio.","b) Fuente.","c) Mecanismo de transmisión.","d) Estado inmunológico."],a:3},
+ {q:"45. No es un factor epidemiológico secundario:",o:["a) Sexo.","b) Agente causal.","c) Edad.","d) condiciones socioeconómicas."],a:1},
+ {q:"46. Hablamos de reservorio adicional cuando hablamos de:",o:["a) El suelo.","b) El hombre.","c) Un ser animado.","d) Un ser Inanimado."],a:0},
+ {q:"47. Denominamos reservorio a:",o:["a) Líquido en el que el agente etiológico puede desarrollar la enfermedad.","b) Ser en el que el agente etiológico se reproduce y se perpetúa.","c) Sustancia en cualquier formato en la que se puede detectar al huésped.","d) Ninguna es cierta."],a:1},
+ {q:"48. Las infecciones autógenas son aquellas que:",o:["a) Ocurren por microorganismos que están de forma habitual en el hombre.","b) Se transmiten entre seres de la misma especie.","c) Aparecen por agentes etiológicos similares.","d) Se desarrollan entre especies animales diferentes."],a:0},
+ {q:"49. En la iluminación semidirecta:",o:["a) El 90-100% del flujo de luz se dirige hacia abajo y el 0-10% hacia arriba.","b) El 40-50% del flujo de luz se dirige hacia abajo y el 10-30% hacia arriba.","c) El 45-70% del flujo de luz se dirige hacia abajo y el 10-20% hacia arriba.","d) El 40-60% del flujo de luz se dirige hacia abajo y el 10-40% hacia arriba."],a:3},
+ {q:"50. ¿Qué iluminación mínima se considera necesaria en un puesto de trabajo?",o:["a) 2.000 lux.","b) 5.000 lux.","c) 7.000 lux.","d) 10.000 lux."],a:1},
+ {q:"51. ¿Cuál de las siguientes afirmaciones con respecto a las radiaciones electromagnéticas es incorrecta?",o:["a) Se propagan en forma de ondas.","b) Pertenecen a este grupo los rayos alfa (plutonio) y rayos beta (P32).","c) Pertenecen a este grupo los neutrones.","d) Las respuestas b) y c) son incorrectas."],a:3},
+ {q:"52. La consideración de la iluminación natural como elemento favorecedor del buen estado de ánimo de los pacientes es:",o:["a) Cierto, además de ser un agente desinfectante importante.","b) Es igual que la luz artificial.","c) Incierto, cuando las personas están enfermas lo que necesitan es la medicación adecuada.","d) Incierto, en muchos casos, incluso es perjudicial para el estado de ánimo ya que invita al enfermo a pensar que estaría mejor fuera del centro sanitario."],a:0},
+ {q:"53. Respecto a la ventilación de las habitaciones de los hospitales, es cierto que:",o:["a) Si el hospital no dispone de aire acondicionado que realice esta función, habrá que abrir la ventana de 10 a 15 minutos diarios.","b) Todos los días entre 8 y 8:15 de la mañana hay que abrir las ventanas ya que es la hora más adecuada para ello.","c) No es necesario hacerlo, de hecho, sería peligroso para la población en general que los virus y bacterias que hay en todos los hospitales de una ciudad, salgan de ese espacio cerrado y controlado.","d) Es necesario realizarla al menos 3 veces al día."],a:0},
+ {q:"54. ¿Cuál es el color más adecuado para las habitaciones de un hospital?",o:["a) Los colores chillones y alegres son los más adecuados para que el estado de ánimo del paciente mejore.","b) Únicamente se deben pintar de blanco, para ver mejor la suciedad.","c) Lo ideal es cambiar de color con frecuencia siendo indiferente los que se elijan.","d) De colores claros y sin brillo, que no absorban la luz y que no produzcan reflejos, el blanco mate parece el más adecuado."],a:3},
+ {q:"55. ¿Cómo calificarías al ciudadano que quiere discutir, no importa sobre qué cosa? Ciudadano...",o:["a) Prepotente.","b) Desconfiado.","c) Discrepador.","d) Indeciso."],a:2},
+ {q:"56. Un usuario impulsivo es aquel que:",o:["a) Quiere respuestas rápidas.","b) Es influenciable y dependiente.","c) Nunca está seguro.","d) Cree saberlo todo y es dominante."],a:0},
+ {q:"57. Con respecto a la atención del celador a los usuarios, según el perfil del mismo, su misión principal será:",o:["a) Identificar las principales pautas de su comportamiento y conocer sus motivaciones y necesidades.","b) Adaptar su comportamiento para atenderle de la manera más satisfactoria.","c) Obviar en lo posible su obstinación, y priorizar sin adaptarse al mismo en la defensa de la institución donde trabaja.","d) Son ciertas las respuestas a) y b)."],a:3},
+ {q:"58. Para poder ofrecer al usuario una atención que genere satisfacción, es preciso que el celador tenga en cuenta lo que este espera recibir cuando entra en una institución sanitaria, es decir sus:",o:["a) Motivaciones.","b) Expectativas.","c) Sentimientos.","d) Valores."],a:1},
+ {q:"59. ¿Qué necesidad de estas considerarías fuera del grupo de las emocionales, respecto de la atención al público?",o:["a) Recibir un servicio de calidad y con instrucciones claras.","b) Trato respetuoso.","c) Relación de amabilidad.","d) Trato de cortesía."],a:0},
+ {q:"60. ¿Qué es falso de las instalaciones del bloque quirúrgico?",o:["a) Suele situarse en una zona del hospital muy transitada de personal sanitario y de público.","b) Es un área bien comunicada con el resto de las unidades del hospital.","c) En el área limpia de dicho bloque es necesario el uso de gorro y \"papis\".","d) La Zona sin limitaciones de acceso: es la que hay a la entrada del bloque quirúrgico y va desde la puerta que delimita el principio de esta zona hasta los vestuarios y zona de recepción de pacientes."],a:0},
+ {q:"61. Los almacenes para guardar el material quirúrgico, aparatos, sueros, camillas, farmacia en general, etc., existentes en el bloque quirúrgico, pertenecen al área:",o:["a) De intercambio.","b) Estéril.","c) Sucia.","d) Limpia."],a:0},
+ {q:"62. ¿Cómo se denomina el área del bloque quirúrgico donde solo es necesario el empleo de gorro y \"papis\"?",o:["a) De intercambio.","b) Estéril.","c) Sucia.","d) Limpia."],a:3},
+ {q:"63. ¿Cuál es el área del bloque quirúrgico constituida por los quirófanos, la zona del lavado quirúrgico y las áreas de preparación del instrumental estéril?",o:["a) De intercambio.","b) Estéril.","c) Sucia.","d) Limpia."],a:1},
+ {q:"64. ¿Cómo se denomina también al área estéril del bloque quirúrgico?",o:["a) De intercambio.","b) Aséptica.","c) Desinfectada.","d) Limpia."],a:1},
+ {q:"65. ¿Cuál es el lugar donde el celador debe permanecer durante la intervención quirúrgica estando atento a aquello para lo que se le pudiera requerir durante la misma?",o:["a) De intercambio.","b) Aséptica.","c) Limpia.","d) Antequirófano."],a:3},
+ {q:"66. ¿Cómo se denomina la zona del bloque quirúrgico donde se requiere de uniforme quirúrgico, calzas o zuecos quirúrgicos, gorro, y uso de mascarilla obligatorio? Zona...",o:["a) Sin limitación de acceso.","b) Semilimitada.","c) Limitada.","d) Prohibida."],a:2},
+ {q:"67. El antequirófano pertenece a la zona quirúrgica:",o:["a) Sin limitación de acceso.","b) Semilimitada.","c) Limitada.","d) Prohibida."],a:2},
+ {q:"68. ¿En qué grupo de cirugía incluirías aquella que pretende corregir deformidades, como por ejemplo una escoliosis verdadera?",o:["a) Diagnóstica.","b) Curativa.","c) Reparadora.","d) Estética."],a:2},
+ {q:"69. Además de considerarse como el lugar idóneo para la atención del enfermo crítico, la UCI tiene otras características:",o:["a) Permite el aseo del enfermo.","b) Son posibles las visitas de los familiares.","c) Es un lugar de hospitalización.","d) Todas las respuestas anteriores son correctas."],a:3},
+ {q:"70. En cada una de las unidades que integran la UCI, existe un puesto de control, que es atendido por:",o:["a) Auxiliar de enfermería.","b) Enfermero.","c) Celador.","d) Médico."],a:1},
+ {q:"71. Los BOXES se sitúan en:",o:["a) Consultas externas.","b) Planta.","c) UCI.","d) Reanimación."],a:2},
+ {q:"72. En la enfermedad se origina una situación en la que se demandan:",o:["a) Gran cantidad de medicación.","b) Hospitalización indefinida.","c) Grandes dosis de atención y apoyo emocional.","d) Grandes cantidades de dinero."],a:2},
+ {q:"73. Según la SECPAL la enfermedad terminal queda definida por varios elementos entre los que no se encuentra:",o:["a) Gran impacto emocional en paciente, familia y equipo terapéutico muy relacionado con la presencia de la muerte.","b) Falta de posibilidades razonables de respuesta al tratamiento específico.","c) Presencia de una enfermedad avanzada, progresiva e incurable.","d) Presencia de un solo síntoma de carácter específico."],a:3},
+ {q:"74. Entre los principios básicos en el cuidado de los pacientes con enfermedades terminales no se encuentra:",o:["a) Educación para la salud.","b) Control de síntomas.","c) Apoyo emocional y comunicación.","d) Cambios en la organización."],a:0},
+ {q:"75. Los dispositivos intermedios no incluyen:",o:["a) Centros de larga estancia.","b) Unidades de corta estancia.","c) Centro de día.","d) Pisos protegidos."],a:1},
+ {q:"76. Respecto a la unidad de hospitalización psiquiátrica, señala la opción incorrecta:",o:["a) Atiende casos de desintoxicación, así como de evaluación y proceso diagnóstico.","b) Está atendida por un equipo multidisciplinar.","c) Su horario es de mañana.","d) Está indicada para pacientes con enfermedad física que se agrava con patología psíquica."],a:2},
+ {q:"77. Indica qué centro tiene como finalidad la rehabilitación del paciente después de haber pasado un ingreso de 6 a 12 meses:",o:["a) Centro de media estancia.","b) Piso protegido.","c) Centro de salud mental.","d) Ninguna de las respuestas anteriores es correcta."],a:0},
+ {q:"78. La alternativa al ingreso total es:",o:["a) Centro de larga estancia.","b) Centro de día.","c) Piso protegido.","d) Ninguna de las opciones anteriores es correcta."],a:3},
+ {q:"79. Toda sustancia (activa o inactiva) empleada en la fabricación de un medicamento, ya permanezca inalterada, se modifique o desaparezca en el transcurso del proceso, se denomina:",o:["a) Forma galénica.","b) Materia prima.","c) Producto intermedio.","d) Excipiente."],a:1},
+ {q:"80. La forma farmacéutica de un principio activo o placebo, que se investiga o se utiliza como referencia en un ensayo clínico, se denomina:",o:["a) Medicamento biológico.","b) Medicamento de uso humano.","c) Medicamento de terapia génica.","d) Ninguna de las respuestas anteriores es correcta."],a:3},
+ {q:"81. Aquel medicamento elaborado y garantizado por un farmacéutico o bajo su dirección, dispensado en una oficina de farmacia o servicio farmacéutico, enumerado y descrito por el Formulario, es:",o:["a) Fórmula magistral.","b) Medicamento genérico.","c) Producto de higiene personal.","d) Ninguna de las respuestas anteriores es correcta."],a:3},
+ {q:"82. Las vacunas y los inmunosueros se encuadran en el apartado de:",o:["a) Medicamentos biológicos.","b) Medicamentos de terapia génica.","c) Medicamentos de uso veterinario.","d) Todas las respuestas anteriores son correctas."],a:0},
+ {q:"83. La combinación de la forma en la que el producto farmacéutico es presentado por el fabricante y la forma en la que es administrada, se denomina:",o:["a) Preparado oficinal.","b) Forma galénica.","c) Fórmula magistral.","d) Materia prima."],a:1},
+ {q:"84. ¿En qué tipo de servicio de radiología poseen ya como equipación aparatos capaces de efectuar una gran gama de estudios, realizándose radiografías convencionales tanto simples como contrastadas, analógicas o/y digitales con o sin fluoroscopias?",o:["a) Servicio de radiología simple.","b) Servicio de radiología básico.","c) Servicio de radiología general.","d) Servicio de radiología especializado."],a:2},
+ {q:"85. Según el Real Decreto 783/2001 el concepto año se aplica:",o:["a) Al año oficial.","b) A cualquier espacio de tiempo de 12 meses consecutivos.","c) A cualquier espacio de tiempo de 360 días consecutivos.","d) Nada de lo anterior es cierto."],a:1},
+ {q:"86. ¿Qué término técnico (Real Decreto 783/2001) debe emplearse para la actividad que produce un radionúclido en el interior del organismo, que procede del exterior (generalmente al inhalarlo o ingerirlo)?",o:["a) Ingestión.","b) Penetración.","c) Incorporación.","d) Irradiación."],a:2},
+ {q:"87. ¿Qué es falso respecto a los límites de dosis profesionales, de los que trata la normativa, donde se aplican suma de las dosis?",o:["a) Se aplican a la suma de las dosis procedentes de dosis comprometidas a 50 años (hasta 70 años en el caso de niños) a causa de las incorporaciones producidas en el mismo período.","b) Se aplican a la suma de las dosis procedentes de exposiciones externas en un período concreto (un año).","c) Se aplican a la suma de las dosis procedentes de exposiciones recibidas del fondo radiactivo natural.","d) Todas las anteriores se contemplan a nivel profesional."],a:2},
+ {q:"88. ¿De qué factores de los que se nombra dependerá la dosis por contaminación (o por exposición a la radiación que emite un radionúclido incorporado en el organismo)?",o:["a) Distribución por el organismo.","b) Distancia a la fuente.","c) Colocación de barreras protectoras.","d) Tiempo de exposición."],a:0},
+ {q:"89. ¿Cuál de estos trabajadores se puede considerar personal profesionalmente expuesto?",o:["a) TSID.","b) Médicos radiólogos, ATS/DUE.","c) Estudiantes o alumnado de trabajos en práctica de Ciclo superior de radioterapia.","d) Todos los anteriores pueden serlos."],a:3},
+ {q:"90. ¿Qué categorías según el nivel de dosis o riesgo existen de personal profesionalmente expuesto?",o:["a) Una, solo la A que es la de riesgo.","b) Una, solo la B que es la de riesgo.","c) Dos, la A y la B.","d) Tres, la A, la B y la C."],a:2},
+ {q:"91. ¿Mediante qué medio se determinará en trabajador expuesto de categoría B la dosis estimada?",o:["a) Dosimetría de bolsillo.","b) Dosimetría pectoral.","c) Dosimetría de área.","d) Dosimetría de película."],a:2},
+ {q:"92. El Plan de Autoprotección tendrá vigencia indeterminada; se mantendrá adecuadamente actualizado, y se revisará, al menos, con una periodicidad:",o:["a) No superior a tres años.","b) Superior a tres años.","c) No superior a un año.","d) Superior a un año."],a:0},
+ {q:"93. Informar al órgano que otorga la licencia o permiso determinante para la explotación o inicio de la actividad acerca de cualquier modificación o cambio sustancial en la actividad o en las instalaciones, en aquello que afecte a la autoprotección es obligación de:",o:["a) El titular de la actividad.","b) El técnico competente.","c) La Autoridad competente.","d) El mando intermedio de la empresa."],a:0},
+ {q:"94. Informar a los órganos competentes en materia de Protección Civil de las Administraciones Públicas de la realización de los simulacros previstos en el Plan de Autoprotección debe hacerse:",o:["a) Con un antelación de 15 días.","b) Con una antelación de 1 mes.","c) En todo caso antes de su ejecución.","d) Con la antelación suficiente."],a:3},
+ {q:"95. ¿Qué indica esta señal?",o:["a) Radiaciones no ionizantes.","b) Peligro biológico.","c) Láser.","d) Campos magnéticos estáticos (RMN)."],a:1,img:"Imagen Peligro Biológico.jpg"},
+ {q:"96. Para calificar un riesgo desde el punto de vista de su gravedad, se valorarán conjuntamente:",o:["a) El tipo de riesgo y el número de posibles afectados.","b) Las características del centro de trabajo y las condiciones personales del trabajador.","c) La existencia de procesos, actividades, operaciones, equipos o productos potencialmente peligrosos y con las medidas preventivas adoptadas.","d) La probabilidad de que se produzca el daño y la severidad del mismo."],a:3},
+ {q:"97. ¿Cómo se denomina el órgano por excelencia de consulta y participación en materia de prevención existente en cada Departamento de Salud de la Conselleria de Sanidad?",o:["a) Junta de Seguridad.","b) Comité de Seguridad y Salud.","c) Consejo de Seguridad y Salud Laboral.","d) Comisión de Seguridad Laboral."],a:1},
+ {q:"98. ¿De qué tipo de violencia hablamos cuando no existe relación laboral, ni trato como persona usuaria o comercial entre quienes llevan a cabo las acciones violentas y la víctima?",o:["a) De violencia tipo 1.","b) De violencia tipo 2.","c) De violencia tipo 3.","d) De violencia tipo 4."],a:0},
+ {q:"99. ¿A quién corresponde colaborar con la persona responsable de centro en la explotación de datos del Código Alerta?",o:["a) A la Unidad Central del Servicio de Prevención de Riesgos Laborales.","b) A la Unidad Periférica del Servicio de Prevención de Riesgos Laborales.","c) A la Comisión Técnica para la gestión de la Prevención de Riesgos Laborales departamental.","d) Al Comité de Seguridad y Salud."],a:1},
+ {q:"100. ¿Qué figura ha creado la Instrucción 3/2017, de la Secretaría de Estado Seguridad sobre medidas policiales a adoptar frente a agresiones a profesionales de la salud para fortalecer la cooperación policial con las autoridades sanitarias en sus actuaciones para mejorar la seguridad en los centros sanitarios?",o:["a) El intermediario policial sanitario.","b) El mediador policial sanitario.","c) El interlocutor policial territorial sanitario.","d) El agente policial para la seguridad sanitaria."],a:2},
+ {q:"Preguntas de reserva<br><br>1. El funcionamiento objetivo de un equipo de trabajo debe reunir todas estas características excepto:",o:["a) Determinación del fin a obtener de modo transparente.","b) El fin a obtener debe ser conocido por todos sus miembros.","c) Descripción de soluciones mediante la utilización de las sugerencias y soluciones expuestas por los miembros.","d) Ejecución del objetivo, exclusivamente a través del líder o superior."],a:3},
+ {q:"2. ¿Cuál de los siguientes argumentos no sería en sí mismo, un motivo suficiente para suspender las maniobras de RCP básica?",o:["a) La comprobación fehaciente de la voluntad previa del afectado de no recibir las maniobras de RCP.","b) El agotamiento del reanimador.","c) La ausencia de respuesta durante 5 minutos, en un paciente de más de 85 años.","d) La confirmación de que la parada cardiaca, se ha producido como consecuencia de la evolución de una enfermedad terminal."],a:2},
+ {q:"3. ¿Dónde se transporta los materiales pequeños en el hospital una vez esterilizado para ser usado en el área asignada? En...",o:["a) Grúas especiales.","b) Carretillas cerradas.","c) Bolsas de plástico cerradas.","d) Carros herméticos."],a:2}
+];
+
+let idx = 0;
+let userAnswers = new Array(db.length).fill(null);
+let tTotal = 128 * 60 + 45; 
+let isPaused = false;
+let pauseInterval = null;
+let okCount = 0;
+let failCount = 0;
+let blankCount = db.length;
+let autoAdvanceTimeout = null;
+
+function render() {
+    const q = db[idx];
+    const container = document.getElementById('question-container');
+    
+    let html = `<span class="q-meta">PREGUNTA ${idx+1} DE ${db.length}</span>`;
+
+    // LÓGICA DE IMAGEN AUTOMÁTICA
+    if (q.img) {
+        html += `
+        <div class="split-layout">
+            <div class="img-col"><img src="${q.img}" class="q-img" alt="Imagen de apoyo"></div>
+            <div class="txt-col">
+                <div class="q-text">${q.q}</div>
+                <div class="options-grid">${makeOpts(q)}</div>
+            </div>
+        </div>`;
+    } else {
+        html += `<div class="q-text">${q.q}</div><div class="options-grid">${makeOpts(q)}</div>`;
+    }
+
+    container.innerHTML = html;
+
+    // BOTONES NAV
+    document.getElementById('btn-prev').disabled = idx === 0;
+
+    const btnNext = document.getElementById('btn-next');
+    const btnEnd = document.getElementById('btn-end');
+
+    if (idx === db.length - 1) {
+        btnNext.style.display = 'none';
+        btnEnd.style.display = 'block';
+    } else {
+        btnNext.style.display = 'block';
+        btnEnd.style.display = 'none';
+    }
+}
+
+function makeOpts(q) {
+    return q.o.map((txt, i) => {
+        let cls = 'btn-opt';
+        if (userAnswers[idx] !== null) {
+            cls += ' disabled';
+            if (i === q.a) cls += ' correct';
+            else if (i === userAnswers[idx]) cls += ' wrong';
+        }
+        return `<button class="${cls}" onclick="pick(${i})">${txt}</button>`;
+    }).join('');
+}
+
+function pick(i) {
+    if (userAnswers[idx] !== null) return;
+    
+    if (autoAdvanceTimeout) clearTimeout(autoAdvanceTimeout);
+
+    isPaused = true;
+    userAnswers[idx] = i;
+
+    if(i === db[idx].a) okCount++; else failCount++;
+    blankCount--;
+    
+    document.getElementById('sc-ok').innerText = okCount;
+    document.getElementById('sc-fail').innerText = failCount;
+    document.getElementById('sc-blank').innerText = blankCount;
+
+    render();
+    document.getElementById('prog-bar').style.width = (userAnswers.filter(x => x !== null).length / db.length * 100) + "%";
+    
+    if (idx === db.length - 1) {
+        autoAdvanceTimeout = setTimeout(() => {
+            finishTest();
+        }, 3000);
+    } else {
+        autoAdvanceTimeout = setTimeout(() => {
+            isPaused = false;
+            idx++;
+            render();
+        }, 3000);
+    }
+}
+
+function manualNav(dir) {
+    if (autoAdvanceTimeout) clearTimeout(autoAdvanceTimeout);
+    isPaused = false;
+    if (idx + dir >= 0 && idx + dir < db.length) {
+        idx += dir;
+        render();
+    }
+}
+function prevQ() { manualNav(-1); }
+function nextQ() { manualNav(1); }
+
+function manualJump(target) {
+    if (autoAdvanceTimeout) clearTimeout(autoAdvanceTimeout);
+    isPaused = false;
+    idx = target;
+    render();
+}
+function jumpFirst() { manualJump(0); }
+function jumpLast() { manualJump(db.length - 1); }
+
+function togglePause() {
+    isPaused = !isPaused;
+    document.getElementById('pause-screen').style.display = isPaused ? 'flex' : 'none';
+}
+
+function startTimer() {
+    pauseInterval = setInterval(() => {
+        if (!isPaused) {
+            let m = Math.floor(tTotal / 60);
+            let s = tTotal % 60;
+            document.getElementById('timer').innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+            if (tTotal-- <= 0) finishTest();
+        }
+    }, 1000);
+}
+
+function finishTest() {
+    try {
+        clearInterval(pauseInterval);
+        if (autoAdvanceTimeout) clearTimeout(autoAdvanceTimeout);
+        
+        let c = 0, w = 0, b = 0;
+        userAnswers.forEach((a, i) => {
+            if (a === null) b++;
+            else if (a === db[i].a) c++;
+            else w++;
+        });
+
+        // Asegurarse de que son números y no strings (para evitar errores en Safari)
+        const pc = c * 3.75;
+        const pw = w * 1.25;
+        let tot = pc - pw;
+        if (tot < 0) tot = 0;
+
+        let n10 = (tot / 386.25) * 10;
+        if (n10 < 0) n10 = 0;
+
+        let bolsa = "0 PUNTOS";
+        if (n10 >= 3.5 && n10 <= 4) bolsa = "5 PUNTOS";
+        else if (n10 > 4 && n10 <= 5) bolsa = "10 PUNTOS";
+        else if (n10 > 5 && n10 <= 6) bolsa = "15 PUNTOS";
+        else if (n10 > 6 && n10 <= 7) bolsa = "20 PUNTOS";
+        else if (n10 > 7 && n10 <= 8) bolsa = "30 PUNTOS";
+        else if (n10 > 8 && n10 <= 9) bolsa = "40 PUNTOS";
+        else if (n10 > 9) bolsa = "50 PUNTOS";
+
+        document.getElementById('r-ok').innerText = c;
+        document.getElementById('r-fail').innerText = w;
+        document.getElementById('r-blank').innerText = b;
+        
+        // PINTAR LOS CÁLCULOS
+        document.getElementById('pts-ok').innerText = pc.toFixed(2);
+        document.getElementById('pts-fail').innerText = pw.toFixed(2);
+        document.getElementById('pts-total').innerText = tot.toFixed(2);
+        
+        document.getElementById('val-10').innerText = n10.toFixed(2);
+        document.getElementById('val-bolsa').innerText = bolsa;
+        
+        const qt = n10 >= 8 ? '"El éxito no es el final, el fracaso no es fatal: es el coraje para continuar." - Churchill' : (n10 >= 5 ? '"Cree que puedes y casi habrás llegado." - Roosevelt' : '"Nuestra mayor gloria no es no caer nunca, sino levantarnos." - Confucio');
+        document.getElementById('quote-area').innerText = qt;
+
+        let rev = "";
+        db.forEach((q, i) => {
+            let u = userAnswers[i];
+            let st = u === q.a ? '<span style="color:var(--ok)">✅ Correcta</span>' : (u === null ? '<span style="color:var(--blank)">⚪ Blanco</span>' : '<span style="color:var(--fail)">❌ Incorrecta</span>');
+            rev += `<div class="rev-item"><strong>${i+1}. ${st}</strong><br>${q.q}<br><span style="color:var(--ok); font-weight:bold">Correcta: ${q.o[q.a]}</span></div>`;
+        });
+        document.getElementById('review-list').innerHTML = rev;
+
+        document.getElementById('quiz-view').style.display = 'none';
+        document.getElementById('results-view').style.display = 'block';
+        window.scrollTo(0,0);
+        
+    } catch(e) {
+        console.error(e);
+        const errBox = document.getElementById('crash-msg');
+        if(errBox) {
+            errBox.style.display = 'block';
+            errBox.innerHTML = "Error interno al finalizar el test. Contacta con soporte: " + e.message;
+        }
+    }
+}
+
+window.onload = function() {
+    render();
+    startTimer();
+};
+</script>
+</body>
+</html>
